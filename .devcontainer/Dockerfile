@@ -24,8 +24,32 @@ RUN if [ "${NODE_VERSION}" != "none" ]; then su vscode -c "umask 0002 && . /usr/
 # [Optional] Uncomment this line to install global node packages.
 # RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install -g <your-package-here>" 2>&1
 
-ARG WILDFLY_VERSION=26.1.1.Final
-ARG WILDFLY_DOWNLOAD_URL=https://github.com/wildfly/wildfly/releases/download/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.tar.gz
+# Install global node packages.
+RUN su vscode -c "source /usr/local/share/nvm/nvm.sh && npm install --location=global @angular/cli@14" 2>&1
 
-ADD ${WILDFLY_DOWNLOAD_URL} /tmp/
-RUN mkdir /wildfly && tar xvfz /tmp/wildfly-${WILDFLY_VERSION}.tar.gz --directory /wildfly && chown -R vscode:vscode /wildfly
+# Set up Angular CLI autocompletion for your terminal
+RUN su vscode -c "ng completion" 2>&1
+
+ARG WILDFLY_VERSION=26.1.1.Final
+ARG WILDFLY_PREVIEW=false
+
+RUN \
+    SERVER_HOME=/usr/lib/servers \
+    && \
+    case ${WILDFLY_PREVIEW} in \
+        "true") \
+            DOWNLOAD_URL=https://github.com/wildfly/wildfly/releases/download/${WILDFLY_VERSION}/wildfly-preview-${WILDFLY_VERSION}.tar.gz; \
+            ;; \
+        "false") \
+            DOWNLOAD_URL=https://github.com/wildfly/wildfly/releases/download/${WILDFLY_VERSION}/wildfly-${WILDFLY_VERSION}.tar.gz; \
+            ;; \
+    esac \
+    \
+    && cd /tmp \
+    && wget --show-progress -O wildfly.tar.gz "${DOWNLOAD_URL}" \
+    \
+    && mkdir -p ${SERVER_HOME} \
+    \
+    && tar xvfz /tmp/wildfly.tar.gz --directory ${SERVER_HOME} \
+    && rm -f wildfly.tar.gz \
+    && chown -R vscode:vscode ${SERVER_HOME}/*
